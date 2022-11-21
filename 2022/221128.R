@@ -2,8 +2,8 @@
 #Author: David Mendez
 
 library(tidyr)
+library(RColorBrewer)
 library(ggplot2)
-
 
 
 # Read the dataset ----
@@ -44,14 +44,19 @@ proper_data[,fact] <- apply(clean_data[,fact], 2, function(x) as.factor(x))
 proper_data <- proper_data[!is.na(proper_data$Price) & proper_data$Price<1e6 & proper_data$Energy.label != "Niet verplicht",]
  
  #plot
-cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
- ggplot(proper_data, aes(x = Price/1e5, color=Energy.label, fill=Energy.label)) +
+sq_palette_hot <- 'YlOrRd'
+sq_palette_cold <- 'Blues'
+sq_palette_green <- 'Greens'
+ql_palette <- 'Paired'
+div_palette <- 'RdYlBu'
+
+
+ ggplot(proper_data, aes(x = Price/1e5, fill=Energy.label)) +
          geom_histogram( position="identity",alpha=0.5)+
          facet_grid(. ~ Energy.label) +
          theme(axis.text.x = element_text(angle = 35,vjust = 0.7 ,hjust=0.5),
                legend.position = "none") +
          ggtitle("Distribution of Houses for sale in the Netherlands (<1M€) by Energy Label and Price") +
          xlab("Price (x100.000€)") + ylab("Amount") +
-         scale_fill_manual(values=cbPalette) +
-         scale_color_manual(values=cbPalette)
+         scale_fill_brewer(palette = sq_palette_hot) 
  
