@@ -50,7 +50,7 @@ cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2",
          facet_grid(. ~ Energy.label) +
          theme(axis.text.x = element_text(angle = 35,vjust = 0.7 ,hjust=0.5),
                legend.position = "none") +
-         ggtitle("Distribution of Houses in the Netherlands (<1M€) by Energy Label and Price") +
+         ggtitle("Distribution of Houses for sale in the Netherlands (<1M€) by Energy Label and Price") +
          xlab("Price (x100.000€)") + ylab("Amount") +
          scale_fill_manual(values=cbPalette) +
          scale_color_manual(values=cbPalette)
