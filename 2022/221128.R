@@ -1,62 +1,44 @@
-# 21-Nov-22
+# 28-Nov-22
 #Author: David Mendez
 
 library(tidyr)
-library(RColorBrewer)
 library(ggplot2)
+library(tidyverse)
+library(tidytuesdayR)
+library(sf)
+library(spData)
+library(purrr)
+
+
 
 
 # Read the dataset ----
-raw_data <- read.csv('C:/Users/david/Desktop/R/mondayVizday/2022/data/dutch_house_prices_dataset.csv')
-
-#clean de dataset----
-clean_data <- raw_data 
-clean_data$Lot.size..m2. <- gsub(" m²","",
-                                 gsub("\\.","",
-                                      raw_data$Lot.size..m2.
-                                      )
-                                 )
-clean_data$Living.space.size..m2. <- gsub(" m²","", raw_data$Living.space.size..m2.)
-clean_data$Price <- gsub("€ ","",
-                         gsub("Prijs op aanvraag","",
-                              gsub("\\.","",
-                                   raw_data$Price
-                                   )
-                              )
-                         )
-clean_data$Estimated.neighbourhood.price.per.m2 <- gsub("€ ","",
-                                                        gsub("\\.","",
-                                                             raw_data$Estimated.neighbourhood.price.per.m2
-                                                             )
-                                                        )
-clean_data$Build.year <- gsub("Na ","",
-                              gsub("Voor ","",
-                                   raw_data$Build.year))
-clean_data$Energy.label <- gsub("\\+","",raw_data$Energy.label)
-
-# Assign data classes ----
-numeric <- c("Price","Lot.size..m2.","Living.space.size..m2.","Estimated.neighbourhood.price.per.m2","Build.year")
-fact <- c("Energy.label","Build.type")
-
-proper_data <- clean_data
-proper_data[,numeric] <- apply(clean_data[,numeric], 2, function(x) as.numeric(x))
-proper_data[,fact] <- apply(clean_data[,fact], 2, function(x) as.factor(x))
-proper_data <- proper_data[!is.na(proper_data$Price) & proper_data$Price<1e6 & proper_data$Energy.label != "Niet verplicht",]
- 
- #plot
-sq_palette_hot <- 'YlOrRd'
-sq_palette_cold <- 'Blues'
-sq_palette_green <- 'Greens'
-ql_palette <- 'Paired'
-div_palette <- 'RdYlBu'
+tuesdata <- tidytuesdayR::tt_load(2022, week = 47)[[1]]
 
 
- ggplot(proper_data, aes(x = Price/1e5, fill=Energy.label)) +
-         geom_histogram( position="identity",alpha=0.5)+
-         facet_grid(. ~ Energy.label) +
-         theme(axis.text.x = element_text(angle = 35,vjust = 0.7 ,hjust=0.5),
-               legend.position = "none") +
-         ggtitle("Distribution of Houses for sale in the Netherlands (<1M€) by Energy Label and Price") +
-         xlab("Price (x100.000€)") + ylab("Amount") +
-         scale_fill_brewer(palette = sq_palette_hot) 
- 
+# create the map
+tuesdata_london <- tuesdata [tuesdata$Longitude > -0.6 &
+                                      tuesdata$Longitude < 0.4 & 
+                                      tuesdata$Latitude > 51.25 & 
+                                      tuesdata$Latitude < 51.71,
+                             ]
+tuesdata_london <- tuesdata_london %>%
+        mutate_all(str_replace_all, "  ", " ")
+tuesdata_london$topic <- unlist(map(str_split(tuesdata_london$Subject_Matter, "-"), 1))
+
+ggplot(data=lnd) + geom_sf()+
+        theme_void()  +
+        geom_point(data=tuesdata_london,
+                   aes(x = as.numeric(Longitude),
+                       y = as.numeric(Latitude),
+                       color = topic),
+                   size = 2.5,
+                   alpha = .6)  +
+        facet_wrap(~ topic, ncol = 7) +
+        coord_sf(xlim=c(-0.6,0.4),ylim=c(51.25,51.71)) + 
+        scale_color_discrete(name = "Topics") +
+        labs(title="Topics of museums \nof London\n") +
+        theme(plot.title = element_text(color="black", size=21, hjust = 0.5),
+              legend.position = "none")
+
+
