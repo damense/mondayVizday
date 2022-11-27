@@ -40,5 +40,6 @@ ggplot(data=lnd) + geom_sf()+
         labs(title="Topics of museums \nof London\n") +
         theme(plot.title = element_text(color="black", size=21, hjust = 0.5),
               legend.position = "none")
+ggsave("221128.png")
 
 
