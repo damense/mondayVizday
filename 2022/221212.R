@@ -15,6 +15,7 @@ library(broom)
 library(httr)
 library(rgdal)
 library(viridis)
+library(ggthemes)
 
 
 
@@ -55,6 +56,15 @@ ggplot()+
                                        ">10 & <100",
                                        ">100 & <1000"
                                        ))+
-        labs(title="Maximum floor \nreached by passenger elevators in Manhattan")+
-        theme_void()
+        theme_classic()+
+        theme(legend.position = "right",
+              axis.line=element_blank(),
+              axis.text.x=element_blank(),
+              axis.text.y=element_blank(),
+              axis.ticks=element_blank(),
+              axis.title.x=element_blank(),
+              axis.title.y=element_blank(),
+              )+
+        labs(title="Maximum floor reached", subtitle=" by passenger elevators in Manhattan")
+        
 ggsave("221211.png")
