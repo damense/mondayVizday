@@ -1,9 +1,11 @@
 # 12-Dec-22
 #Author: David Mendez
 library(ggplot2)
+library(GGally)
 library(tidyverse)
 library(tidytuesdayR)
 library(lubridate)
+#library(devtools)
 
 
 
@@ -60,21 +62,24 @@ tuesdata$change_yoy_se <- as.numeric(tuesdata$change_yoy_se)
 
 
 grouped_data <- tuesdata %>%
-        select(date, region, subsector, change_yoy, change_yoy_se) %>%
-        group_by(date, region, subsector) %>%
-        summarise(across(c(change_yoy, change_yoy_se), mean))
+        select(date, region, subsector, naics, change_yoy) %>%
+        group_by(date, region, subsector, naics) %>%
+        summarise(across(c(change_yoy), mean))
+
+
+plot_data <- grouped_data %>%
+        filter(naics %in% c(443,447,448, 451) | subsector == 'total') %>%
+        filter(region %in% c('US', "West Coast", "New England", "Alaska and Hawaii", "Midwest")) %>%
+         ungroup()%>%
+        select(date, region, change_yoy, subsector)%>%
+        pivot_wider(names_from = subsector, values_from = change_yoy)
 
 #plot
-ggplot(data=grouped_data[grouped_data$date>as.Date('01/01/2020', 
-                                              format='%d/%m/%Y') &
-                                 grouped_data$date<as.Date('01/07/2021',
-                                                      format='%d/%m/%Y'),]) + 
-        geom_line(aes(x=date,
-                       y=change_yoy,
-                      color = region
-                       ), linewidth=1) +
-        scale_color_manual(values=pallette)+
-         facet_wrap (~subsector) +
-        theme(axis.text.x = element_text(angle = 35,vjust = 0.7 ,hjust=0.5),
-              axis.title.x=element_blank())+
-        ylab('Year over Year \n percentage change')
+
+ggpairs(plot_data, 
+        columns = 3:7, 
+        ggplot2::aes(colour=region),
+        upper = list(continuous = wrap("cor", size = 3))) +
+        theme(legend.position = "bottom") +
+        theme_bw()
+ggsave("221219.png")
