@@ -110,6 +110,6 @@ ggplot(data=plot_data)+
                 subtitle = 'with Percentiles') +
         xlab("Prediction inaccuracy \n(degrees Celsius)")+
         ylab("Amount of predictions\n")+
-        theme_minimal() +
+        theme_classic() +
         theme(text=element_text(family = "sans"))
 ggsave("221226.png")
