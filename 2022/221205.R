@@ -1,5 +1,6 @@
 # 05-Dec-22
 #Author: David Mendez
+# title: "Queer movies through the years (TMDB)"
 
 library(tidyr)
 library(ggplot2)

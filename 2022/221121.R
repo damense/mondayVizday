@@ -1,5 +1,6 @@
 # 21-Nov-22
 #Author: David Mendez
+# title: "Distribution of Houses for sale in the Netherlands (<1M€) by Energy Label and Price"
 
 library(tidyr)
 library(ggplot2)
