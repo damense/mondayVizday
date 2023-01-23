@@ -67,9 +67,9 @@ spanish_and_dutch_works$title_of_work[grepl("Third of May",
 
 # plot --------
 plot_data <- spanish_and_dutch_works %>% filter(origin=="worksgardner")
-plot_data$edition_number_year <- as_factor(paste(plot_data$edition_number, " (", plot_data$publication_year,")", sep="")) 
+
 max_works <- plot_data %>%
-        select(artist_name, title_of_work ,edition_number, space_ratio_per_page, publication_year, edition_number_year)%>%
+        select(artist_name, title_of_work ,edition_number, space_ratio_per_page, publication_year)%>%
         group_by(edition_number_year) %>%
         slice(which.max(space_ratio_per_page))
 max_works$image <- paste("data/",
@@ -77,6 +77,9 @@ max_works$image <- paste("data/",
                             ".jpg",
                             sep = "")
 max_works$label <- max_works$title_of_work
+max_works$position <- max_works$space_ratio_per_page+0.5
+max_works$position[max_works$title_of_work=="Landscape with Cypress Trees"] <- 2 
+
 for (i in length(max_works$image):2){
         if(max_works$image[i]==max_works$image[i-1]){
                 max_works$image[i] <- NA
@@ -89,9 +92,17 @@ for (i in length(max_works$image):2){
 ggplot()+
         geom_point(data=plot_data,
                    aes(x=publication_year,
-                       y=space_ratio_per_page, 
+                       y=space_ratio_per_page,
+                       group=artist_nationality,
                        fill=artist_nationality),
                    pch=21) +
+        geom_smooth(data=plot_data,
+                   aes(x=publication_year,
+                       y=space_ratio_per_page, 
+                       group=artist_nationality,
+                       fill=artist_nationality),
+                   color="grey",
+                   linetype=2)+
         geom_line(data=plot_data[plot_data$title_of_work %in% max_works$title_of_work,],
                   aes(x=publication_year,
                       y=space_ratio_per_page,
@@ -99,22 +110,24 @@ ggplot()+
                   show.legend = F)+
         geom_image(data=max_works, 
                    aes(x=publication_year,
-                       y=space_ratio_per_page+0.5,
+                       y=position,
                        image = image), 
                    size = 0.15)+
         geom_label(data=max_works, 
                    aes(x=publication_year,
-                       y=space_ratio_per_page+0.25,
+                       y=position-0.25,
                        label = label,
                        color=title_of_work),
                    size=3,
                    fill = "white",
                    show.legend = F) +
         ylim(c(0,2.5)) +
-        theme(axis.text.x=element_text(angle=45))+
-        expand_limits(x= c(-1, length(unique(max_works$edition_number_year))))+
+        xlim(c(1916,2022)) +
+   #     theme(axis.text.x=element_text(angle=45))+
+  #      expand_limits(x= c(-1, length(unique(max_works$edition_number_year))))+
         theme_bw() +
         labs(title="Dutch vs. Spanish artists", 
-             subtitle="Ratio per page occupied by Dutch and Spanish Artists for different Editions") +
-        xlab("Edition (Publication Year)")+
+             subtitle="Ratio per page occupied by Dutch and Spanish Artists for different Editions \n with a picture of the biggest per year") +
+        xlab("Book's Publication Year")+
         ylab("Ratio of Space per Page")
+ggsave("230117.png")
