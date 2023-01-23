@@ -14,15 +14,15 @@ library(ggimage)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 # Read the dataset ----
-tuesdata <- tidytuesdayR::tt_load(2023, week = 2)
+
 
 feederwatch <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-01-10/PFW_2021_public.csv')
 site_data <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-01-10/PFW_count_site_data_public_2021.csv')
+# reading link between codes and names
 name_dictionary <- readxl::read_excel("data/FeederWatch_Data_Dictionary.xlsx", 
                                    "Species Codes")
 colnames(name_dictionary) <- name_dictionary[1,]
 name_dictionary <- name_dictionary[-1,c(1,3)]
-cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 
 canada_map <- getData("GADM", country="CAN", level=1)
@@ -105,7 +105,7 @@ ggplot() +
                       y=latitude,
                       color=PRIMARY_COM_NAME),
                    show.legend = F) +
-        theme_minimal()+
+        theme_bw()+
         theme(axis.line=element_blank(),
               axis.text.x=element_blank(),
               axis.text.y=element_blank(),
@@ -115,9 +115,9 @@ ggplot() +
         )+
         labs(title="Sightings of spring birds", 
              subtitle="Distribution of birds that are seen mostly in the spring") +
-        geom_label(aes(x=-120,
+        geom_label(aes(x=-100,
                        y=20),
                    size=2,
                    label="Image source: Wikipedia",
                    fill = "white")
-ggsave("220110.png")        
+ggsave("230110.png")        
