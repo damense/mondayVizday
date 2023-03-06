@@ -115,4 +115,4 @@ ggplot()+
              colour = "Actor name") +
         xlab("Release Year")+
         ylab("Age gap")
-
+ggsave("230218.png")
