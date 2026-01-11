@@ -1,0 +1,146 @@
+---
+title: "TidyTemplate"
+date: 2026-01-02
+output: html_document
+---
+
+# TidyTuesday
+
+Join the Data Science Learning Community in the weekly #TidyTuesday event! Every week we post a raw dataset, a chart or article related to that dataset, and ask you to explore the data. While the dataset will be “tamed”, it will not always be tidy! As such you might need to apply various R for Data Science techniques to wrangle the data into a true tidy format. The goal of TidyTuesday is to apply your R skills, get feedback, explore other’s work, and connect with the greater #RStats community! As such we encourage everyone of all skills to participate!
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(tidytuesdayR)
+library(paletteer)
+```
+
+# Load the weekly Data
+
+Download the weekly data and make available in the `tt` object.
+
+```{r Load}
+tt <- tt_load("2025-12-30")
+colors <- paletteer_c("scico::berlin", n = 15)
+```
+
+# Readme
+
+Take a look at the readme for the weekly data to get insight on the dataset. This includes a data dictionary, source, and a link to an article on the data.
+
+```{r Readme, eval = interactive()}
+tt
+```
+
+# Glimpse Data
+
+Take an initial look at the format of the data available.
+
+```{r Glimpse}
+map(tt, glimpse)
+```
+
+# Wrangle
+
+Explore the data and process it into a nice format for plotting! Access each dataset by name by using a dollarsign after the `tt` object and then the name of the data set.
+
+```{r Wrangle}
+christmas_novel_authors <- tt$christmas_novel_authors
+christmas_novel_text <- tt$christmas_novel_text
+christmas_novels <- tt$christmas_novels
+
+process_data <- christmas_novel_authors |> 
+        full_join(
+                christmas_novels,
+                by=join_by(gutenberg_author_id)
+        ) |> 
+        full_join(
+                christmas_novel_text,
+                by=join_by(gutenberg_id),
+                relationship = "many-to-many"
+        ) |> 
+        filter(!is.na(text))
+
+
+```
+
+``` {r Clean words}
+clean_words <- process_data |> 
+  select(title,text,birthdate) |> 
+  mutate(text=tolower(text),
+         text=gsub("\\.|\\:|\\,|\\'s|\\?|\\!|\\;| |\\--|\"|\'"," ",text)
+         ) 
+
+raw_words <- clean_words |> 
+  filter(birthdate>1860) |> 
+  pull(text) |> 
+  str_split(" ") |> 
+  unlist() |> 
+  table() |> 
+  as.data.frame() |> 
+  filter(Var1!="") |> 
+  full_join(
+    clean_words |> 
+  filter(birthdate<1825) |> 
+  pull(text) |> 
+  str_split(" ") |> 
+  unlist() |> 
+  table() |> 
+  as.data.frame() |> 
+  filter(Var1!="") |> 
+  rename(oldies=Freq),
+  by=join_by(Var1)
+  ) |> mutate(diff=oldies-Freq)
+
+
+```
+
+# Visualize
+
+Using your processed dataset, create your unique visualization.
+
+```{r Visualize}
+process_data |> 
+        mutate(God=grepl("God",text),
+               Jesus=grepl("Jesus",text),
+               Xmas=grepl("Christmas|christmas|xmas|xmases",text),
+               angel=grepl("Angel|angel",text)) |> 
+        pivot_longer(cols = c("God","Jesus","Xmas"), names_to = "Word") |> 
+        filter(value) |> 
+        group_by(title,birthdate, Word) |> 
+        summarise(n=n()) |> 
+        ggplot(
+                aes(
+                        x=birthdate,
+                        y=n,
+                        col=Word
+                )
+        )+
+        geom_point(size=3,alpha=0.8)+
+        stat_smooth(se = F, method="lm")+
+        theme_minimal()+
+  scale_y_log10(limits=c(1,1000))+
+  xlab("Author's Birthdate")+ylab("Word count")+
+  theme(legend.position="inside",
+        legend.position.inside = c(0.42,0.8),
+        legend.background = element_rect(colour = "black",fill=colors[13]),
+        plot.background = element_rect(fill=colors[13]),
+        text = element_text(color = "white",size=15),
+        axis.text = element_text(color = "white",size=13))
+  
+```
+
+# Save Image
+
+Save your image for sharing. Be sure to use the `#TidyTuesday` hashtag in your post on twitter!
+
+```{r}
+# This will save your most recent plot
+ggsave(
+  filename = paste("My TidyTuesday Plot_",Sys.Date(),".png",sep = ""),
+  device = "png"
+)
+```

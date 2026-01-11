@@ -1,0 +1,123 @@
+---
+title: "TidyTemplate"
+date: 2026-01-10
+output: html_document
+---
+
+# TidyTuesday
+
+Join the Data Science Learning Community in the weekly #TidyTuesday event!
+Every week we post a raw dataset, a chart or article related to that dataset, and ask you to explore the data.
+While the dataset will be “tamed”, it will not always be tidy! As such you might need to apply various R for Data Science techniques to wrangle the data into a true tidy format.
+The goal of TidyTuesday is to apply your R skills, get feedback, explore other’s work, and connect with the greater #RStats community!
+As such we encourage everyone of all skills to participate!
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(tidytuesdayR)
+library(eulerr)
+```
+
+# Load the weekly Data
+
+Download the weekly data and make available in the `tt` object.
+
+```{r Load}
+tt <- tt_load("2025-06-03")
+```
+
+
+# Readme
+
+Take a look at the readme for the weekly data to get insight on the dataset.
+This includes a data dictionary, source, and a link to an article on the data.
+
+```{r Readme, eval = interactive()}
+tt
+```
+
+
+# Glimpse Data
+
+Take an initial look at the format of the data available.
+
+```{r Glimpse}
+map(tt, glimpse)
+```
+
+# Wrangle
+
+Explore the data and process it into a nice format for plotting! Access each dataset by name by using a dollarsign after the `tt` object and then the name of the data set.
+
+```{r Wrangle}
+gutenberg_authors <- tt$gutenberg_authors
+gutenberg_languages <- tt$gutenberg_languages
+gutenberg_metadata <- tt$gutenberg_metadata
+gutenberg_subjects <- tt$gutenberg_subjects
+
+gutenberg <- gutenberg_languages |> 
+        full_join(
+                gutenberg_metadata,
+                by=join_by(gutenberg_id, language),relationship = "many-to-many"
+        ) |> 
+        full_join(
+                gutenberg_subjects,
+                by=join_by(gutenberg_id),relationship = "many-to-many"
+        ) |> 
+        full_join(
+                gutenberg_authors,
+                by=join_by(gutenberg_author_id, author),relationship = "many-to-many"
+        )
+
+top_langs <- gutenberg_languages %>%
+  count(language, sort = TRUE) %>%
+  head(10) %>%  # adjust this number
+  pull(language)
+
+
+df_combined <- gutenberg_languages %>%
+        filter(grepl(paste(top_langs, collapse = "|"),language)) |> 
+  group_by(gutenberg_id) %>%
+  summarise(languages = paste(sort(language), collapse = "&")) %>%
+  ungroup()
+
+
+df_filtered <- df_combined %>%
+  filter(str_count(languages, "&") <= 1)
+
+
+lang_counts <- df_filtered %>%
+  count(languages) %>%
+  deframe()
+
+
+```
+
+
+# Visualize
+
+Using your processed dataset, create your unique visualization.
+
+```{r Visualize}
+
+fit <- euler(lang_counts)
+plot(fit, quantities = TRUE)
+
+  
+```
+
+# Save Image
+
+Save your image for sharing. Be sure to use the `#TidyTuesday` hashtag in your post on twitter! 
+
+```{r}
+# This will save your most recent plot
+ggsave(
+  filename = "My TidyTuesday Plot.png",
+  device = "png"
+)
+```
