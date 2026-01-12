@@ -19,7 +19,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r libraries, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(tidytuesdayR)
-library(eulerr)
+library(RColorBrewer)
+library(cowplot)
+library(scales)
+library(purrr)
 ```
 
 # Load the weekly Data
@@ -78,21 +81,70 @@ top_langs <- gutenberg_languages %>%
   head(10) %>%  # adjust this number
   pull(language)
 
+all_langs <- c("English","French","Finnish",
+                                "German","Italian","Dutch",
+                                "Spanish","Portuguese","Hungarian",
+                                "Chinese")
 
-df_combined <- gutenberg_languages %>%
-        filter(grepl(paste(top_langs, collapse = "|"),language)) |> 
+
+# Prepare data - filter out single-book combinations
+df_upset <- gutenberg_languages %>%
+  filter(language %in% top_langs) %>%
+  left_join(
+          data.frame(
+                  language =top_langs,
+                  lang_long = all_langs
+          )
+  ) |> select(-language) |> rename(language=lang_long) |> 
   group_by(gutenberg_id) %>%
-  summarise(languages = paste(sort(language), collapse = "&")) %>%
-  ungroup()
+  summarise(languages = list(sort(language))) %>%
+  mutate(combo = map_chr(languages, ~paste(.x, collapse = "&"))) %>%
+  count(combo, languages) %>%
+  filter(n > 1)  
 
+# Create presence/absence matrix
 
-df_filtered <- df_combined %>%
-  filter(str_count(languages, "&") <= 1)
+matrix_data <- df_upset %>%
+  mutate(
+    matrix = map(languages, function(langs) {
+      setNames(as.list(as.integer(all_langs %in% langs)), all_langs)
+    })
+  ) %>%
+  unnest_wider(matrix) %>%
+  arrange(desc(n)) %>%
+  mutate(combo_id = row_number())
 
+# Reshape for plotting dots
+dots_data <- matrix_data %>%
+  select(combo_id, all_of(all_langs)) %>%
+  pivot_longer(cols = all_of(all_langs), names_to = "language", values_to = "present") %>%
+  filter(present == 1) %>%
+  mutate(language = factor(language, levels = rev(all_langs)))
 
-lang_counts <- df_filtered %>%
-  count(languages) %>%
-  deframe()
+# Define colors
+lang_colors <- setNames(
+  brewer.pal(length(all_langs), "Paired"),
+  all_langs
+)
+
+# Mix colors function
+mix_colors <- function(langs) {
+  if(length(langs) == 1) return(lang_colors[langs])
+  cols <- col2rgb(lang_colors[langs])
+  mixed <- rowMeans(cols)
+  rgb(mixed[1], mixed[2], mixed[3], maxColorValue = 255)
+}
+
+# Add line colors
+lines_data <- dots_data %>%
+  group_by(combo_id) %>%
+  summarise(
+    y_min = min(as.numeric(language)),
+    y_max = max(as.numeric(language)),
+    langs = list(as.character(language)),
+    line_color = mix_colors(unlist(langs))
+  ) %>%
+  filter(y_min != y_max)
 
 
 ```
@@ -103,9 +155,42 @@ lang_counts <- df_filtered %>%
 Using your processed dataset, create your unique visualization.
 
 ```{r Visualize}
+# Matrix plot
+p_matrix <- ggplot() +
+  geom_segment(data = lines_data, 
+               aes(x = combo_id, xend = combo_id, y = y_min, yend = y_max, color = line_color),
+               linewidth = 3) +
+  geom_point(data = dots_data, 
+             aes(x = combo_id, y = as.numeric(language), color = language),
+             size = 4) +
+  scale_color_manual(values = c(lang_colors, setNames(lines_data$line_color, lines_data$line_color))) +
+  scale_y_continuous(breaks = 1:length(all_langs), labels = rev(all_langs)) +
+  scale_x_continuous(limits = c(0.5, max(matrix_data$combo_id) + 0.5), expand = c(0, 0)) +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_blank(),
+        axis.title = element_blank(),
+        panel.grid.major.x = element_blank())
 
-fit <- euler(lang_counts)
-plot(fit, quantities = TRUE)
+# Bar plot with log scale and limits
+p_bars <- matrix_data %>%
+  mutate(bar_color = map_chr(languages, ~mix_colors(.x))) %>%
+  ggplot(aes(x = combo_id, y = n, fill = bar_color)) +
+  geom_col(width = 1) +
+  scale_fill_identity() +
+  scale_y_log10(
+    limits = c(1, 100000),
+    labels = label_log(digits = 1),
+    n.breaks=6
+  ) +
+  scale_x_continuous(limits = c(0.5, max(matrix_data$combo_id) + 0.5), expand = c(0, 0)) +
+  theme_minimal() +
+  theme(axis.title.x = element_blank(),
+        axis.text.x = element_blank())+
+  ylab("Number of books")+
+  ggtitle("Number of books per language and combinations")
+
+plot_grid(p_bars, p_matrix, ncol = 1, align = "v", rel_heights = c(3, 2))
 
   
 ```
